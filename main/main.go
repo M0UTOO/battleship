@@ -4,9 +4,11 @@ import (
 	"battleship/player"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -23,6 +25,7 @@ func main() {
 			break
 		}
 	}
+	createBoats()
 	player := player.Player{name, port}
 
 	go startServer(port, &player)
@@ -83,4 +86,54 @@ func startServer(port int, player *player.Player) {
 	http.HandleFunc("/hit", hit(player))
 	address := strings.Join([]string{":", strconv.Itoa(port)}, "")
 	http.ListenAndServe(address, nil)
+}
+
+func createBoats() []player.Boat {
+	s := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(s)
+	var boats []player.Boat
+
+	// Carrier
+	var carrier player.Boat
+	carrier.Name = "Carrier"
+	carrier.Size = 5
+	carrier.Direction = r.Intn(4)
+	carrier.StartingCoordinates.X, carrier.StartingCoordinates.Y = getposition(carrier.Direction, carrier.Size)
+	if carrier.Direction == 0 {
+		carrier.StartingCoordinates.X = r.Intn(10) + 1
+		carrier.StartingCoordinates.Y = r.Intn(6) + 5
+	} else if carrier.Direction == 1 {
+		carrier.StartingCoordinates.X = r.Intn(6) + 1
+		carrier.StartingCoordinates.Y = r.Intn(10) + 1
+	} else if carrier.Direction == 2 {
+		carrier.StartingCoordinates.X = r.Intn(10) + 1
+		carrier.StartingCoordinates.Y = r.Intn(6) + 1
+	} else {
+		carrier.StartingCoordinates.X = r.Intn(6) + 5
+		carrier.StartingCoordinates.Y = r.Intn(10) + 1
+	}
+	carrier.BoatParts = make([]int, carrier.Size)
+	for i := 0; i < carrier.Size; i++ {
+		carrier.BoatParts[i] = 0
+	}
+	boats = append(boats, carrier)
+
+}
+
+func getposition(direction, size int) (int, int) {
+	s := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(s)
+	// max := 10 - size
+	if size == 5 {
+
+		if direction == 0 {
+			return r.Intn(10) + 1, r.Intn(6) + 5
+		} else if direction == 1 {
+			return r.Intn(6) + 1, r.Intn(10) + 1
+		} else if direction == 2 {
+			return r.Intn(10) + 1, r.Intn(6) + 1
+		} else {
+			return r.Intn(6) + 5, r.Intn(10) + 1
+		}
+	}
 }

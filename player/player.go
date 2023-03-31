@@ -7,4 +7,18 @@ func Hello() {
 type Player struct {
 	Pseudo string
 	Port   int
+	Boats  []Boat
+}
+
+type Boat struct {
+	Name                string
+	Size                int
+	Direction           int
+	StartingCoordinates Coordinates
+	BoatParts           []int
+}
+
+type Coordinates struct {
+	X int
+	Y int
 }
