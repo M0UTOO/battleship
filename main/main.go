@@ -57,6 +57,32 @@ func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Resp
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":
+			var hit player.Coordinates
+			err := json.NewDecoder(r.Body).Decode(&hit)
+			if err != nil {
+				fmt.Println(err)
+			}
+			for _, c := range *isOccupied {
+				if c.X == hit.X && c.Y == hit.Y {
+					for i, boat := range user.Boats {
+						if boat.Name == c.BoatName {
+							if user.Boats[i].BoatParts[c.BoatPart] == 0 {
+								user.Boats[i].BoatParts[c.BoatPart] = 2
+								fmt.Fprintln(w, "You hit a ", c.BoatName)
+							} else if user.Boats[i].BoatParts[c.BoatPart] == 2 {
+								fmt.Fprintln(w, "You already hit this part of the boat")
+							} else {
+								fmt.Fprintln(w, "You shot in the water")
+								hit.BoatName = "Water"
+								hit.BoatPart = 0
+								*isOccupied = append(*isOccupied, hit)
+							}
+						} else if c.BoatName == "Water" {
+							fmt.Fprintln(w, "You shot in the water")
+						}
+					}
+				}
+			}
 			var hitReq player.HitReq
 			hitReq.Boats = user.Boats
 			hitReq.BoatsMap = *isOccupied
@@ -82,14 +108,6 @@ func sendRequest(url string, method string) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(hitReq.BoatsMap)
-	// for _, boat := range player.Boats {
-	// 	fmt.Println(boat.Name)
-	// 	fmt.Println(boat.Size)
-	// 	fmt.Println(boat.Direction)
-	// 	fmt.Println(boat.StartingCoordinates)
-	// 	fmt.Println(boat.BoatParts)
-	// }
 }
 
 func startServer(port int, player *player.Player, isOccupied *[]player.Coordinates) {
