@@ -19,6 +19,8 @@ type Boat struct {
 }
 
 type Coordinates struct {
-	X int
-	Y int
+	X        int
+	Y        int
+	BoatName string
+	BoatPart int
 }
