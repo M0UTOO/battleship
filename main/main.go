@@ -53,11 +53,14 @@ func boats(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func hit(player *player.Player, isOccupied *[]player.Coordinates) func(w http.ResponseWriter, r *http.Request) {
+func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":
-			req, err := json.Marshal(isOccupied)
+			var hitReq player.HitReq
+			hitReq.Boats = user.Boats
+			hitReq.BoatsMap = *isOccupied
+			req, err := json.Marshal(hitReq)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -74,12 +77,12 @@ func sendRequest(url string, method string) {
 	defer req.Body.Close()
 
 	// var player player.Player
-	var occupied []player.Coordinates
-	err = json.NewDecoder(req.Body).Decode(&occupied)
+	var hitReq player.HitReq
+	err = json.NewDecoder(req.Body).Decode(&hitReq)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(occupied)
+	fmt.Println(hitReq.BoatsMap)
 	// for _, boat := range player.Boats {
 	// 	fmt.Println(boat.Name)
 	// 	fmt.Println(boat.Size)
@@ -189,63 +192,63 @@ func isAlreadyOccupied(coord player.Coordinates, isOccupied *[]player.Coordinate
 	tmp := player.Coordinates{coord.X, coord.Y, "", 0}
 	if direction == 0 {
 		for i := 0; i < size; i++ {
-			tmp.Y = tmp.Y - 1
 			for _, c := range *isOccupied {
-				if c == tmp {
+				if c.X == tmp.X && c.Y == tmp.Y {
 					return false
 				}
 			}
+			tmp.Y = tmp.Y - 1
 		}
 		for i := 0; i < size; i++ {
-			coord.Y = coord.Y - 1
 			coord.BoatName = name
 			coord.BoatPart = i
 			*isOccupied = append(*isOccupied, coord)
+			coord.Y = coord.Y - 1
 		}
 	} else if direction == 1 {
 		for i := 0; i < size; i++ {
-			tmp.X = tmp.X + 1
 			for _, c := range *isOccupied {
-				if c == tmp {
+				if c.X == tmp.X && c.Y == tmp.Y {
 					return false
 				}
 			}
+			tmp.X = tmp.X + 1
 		}
 		for i := 0; i < size; i++ {
-			coord.X = coord.X + 1
 			coord.BoatName = name
 			coord.BoatPart = i
 			*isOccupied = append(*isOccupied, coord)
+			coord.X = coord.X + 1
 		}
 	} else if direction == 2 {
 		for i := 0; i < size; i++ {
-			tmp.Y = tmp.Y + 1
 			for _, c := range *isOccupied {
-				if c == tmp {
+				if c.X == tmp.X && c.Y == tmp.Y {
 					return false
 				}
 			}
+			tmp.Y = tmp.Y + 1
 		}
 		for i := 0; i < size; i++ {
-			coord.Y = coord.Y + 1
 			coord.BoatName = name
 			coord.BoatPart = i
 			*isOccupied = append(*isOccupied, coord)
+			coord.Y = coord.Y + 1
 		}
 	} else {
 		for i := 0; i < size; i++ {
-			tmp.X = tmp.X - 1
 			for _, c := range *isOccupied {
-				if c == tmp {
+				if c.X == tmp.X && c.Y == tmp.Y {
 					return false
 				}
 			}
+			tmp.X = tmp.X - 1
 		}
 		for i := 0; i < size; i++ {
-			coord.X = coord.X - 1
 			coord.BoatName = name
 			coord.BoatPart = i
 			*isOccupied = append(*isOccupied, coord)
+			coord.X = coord.X - 1
 		}
 	}
 	return true

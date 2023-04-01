@@ -24,3 +24,8 @@ type Coordinates struct {
 	BoatName string
 	BoatPart int
 }
+
+type HitReq struct {
+	Boats    []Boat        `json:"boats"`
+	BoatsMap []Coordinates `json:"boatsMap"`
+}
