@@ -39,10 +39,45 @@ func main() {
 	}
 }
 
-func board(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-		player.Hello()
+func board(user *player.Player, isOccupied *[]player.Coordinates) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			fmt.Fprintln(w, "(O = Not Discovered | W = Water | X = Boat Hit)")
+			fmt.Fprintln(w, "Board of ", user.Pseudo, ":")
+			var isBoat bool
+			for i := 1; i < 11; i++ {
+				fmt.Fprint(w, "|")
+				for j := 1; j < 11; j++ {
+					isBoat = false
+					for _, c := range *isOccupied {
+						if c.X == j && c.Y == i {
+							if c.BoatName == "Water" {
+								fmt.Fprint(w, "W")
+								isBoat = true
+							} else {
+								for _, boat := range user.Boats {
+									if boat.Name == c.BoatName {
+										if boat.BoatParts[c.BoatPart] == 0 {
+											fmt.Fprint(w, "O")
+											isBoat = true
+										} else if boat.BoatParts[c.BoatPart] == 2 {
+											fmt.Fprint(w, "X")
+											isBoat = true
+										}
+									}
+								}
+							}
+						}
+					}
+					if !isBoat {
+						fmt.Fprint(w, "O")
+					}
+					fmt.Fprint(w, "|")
+				}
+				fmt.Fprintln(w, "")
+			}
+		}
 	}
 }
 
@@ -62,35 +97,33 @@ func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Resp
 			if err != nil {
 				fmt.Println(err)
 			}
+			if hit.X < 1 || hit.X > 10 || hit.Y < 1 || hit.Y > 10 {
+				fmt.Fprintln(w, "Invalid coordinates")
+				return
+			}
 			for _, c := range *isOccupied {
 				if c.X == hit.X && c.Y == hit.Y {
-					for i, boat := range user.Boats {
+					for _, boat := range user.Boats {
 						if boat.Name == c.BoatName {
-							if user.Boats[i].BoatParts[c.BoatPart] == 0 {
-								user.Boats[i].BoatParts[c.BoatPart] = 2
-								fmt.Fprintln(w, "You hit a ", c.BoatName)
-							} else if user.Boats[i].BoatParts[c.BoatPart] == 2 {
+							if boat.BoatParts[c.BoatPart] == 0 {
+								boat.BoatParts[c.BoatPart] = 2
+								fmt.Fprintln(w, "You hit a", c.BoatName)
+								return
+							} else if boat.BoatParts[c.BoatPart] == 2 {
 								fmt.Fprintln(w, "You already hit this part of the boat")
-							} else {
-								fmt.Fprintln(w, "You shot in the water")
-								hit.BoatName = "Water"
-								hit.BoatPart = 0
-								*isOccupied = append(*isOccupied, hit)
+								return
 							}
 						} else if c.BoatName == "Water" {
 							fmt.Fprintln(w, "You shot in the water")
+							return
 						}
 					}
 				}
 			}
-			var hitReq player.HitReq
-			hitReq.Boats = user.Boats
-			hitReq.BoatsMap = *isOccupied
-			req, err := json.Marshal(hitReq)
-			if err != nil {
-				fmt.Println(err)
-			}
-			w.Write(req)
+			fmt.Fprintln(w, "You shot in the water")
+			hit.BoatName = "Water"
+			hit.BoatPart = 0
+			*isOccupied = append(*isOccupied, hit)
 		}
 	}
 }
@@ -111,7 +144,7 @@ func sendRequest(url string, method string) {
 }
 
 func startServer(port int, player *player.Player, isOccupied *[]player.Coordinates) {
-	http.HandleFunc("/board", board)
+	http.HandleFunc("/board", board(player, isOccupied))
 	http.HandleFunc("boats", boats)
 	http.HandleFunc("/hit", hit(player, isOccupied))
 	address := strings.Join([]string{":", strconv.Itoa(port)}, "")
