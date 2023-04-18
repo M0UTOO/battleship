@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,7 +36,40 @@ func main() {
 	var answer string
 	fmt.Scanln(&answer)
 	if answer == "y" {
-		sendRequest("http://localhost:8000/hit", "POST")
+		for i := 8000; i < 9001; i++ {
+			if i != port {
+				go raw_connect("localhost", strconv.Itoa(i))
+			}
+		}
+	}
+	time.Sleep(100 * time.Second)
+}
+
+func raw_connect(host string, port string) {
+	timeout := time.Second
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
+	if err != nil {
+		return
+	}
+	if conn != nil {
+		defer conn.Close()
+		url := "http://" + host + ":" + port + "/get-player"
+		req, err := http.Get(url)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer req.Body.Close()
+	}
+}
+
+func getPlayer(user *player.Player) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			fmt.Printf("ok")
+			res, _ := json.Marshal(user)
+		
+		}
 	}
 }
 
@@ -81,11 +115,50 @@ func board(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Re
 	}
 }
 
-func boats(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-		player.Hello()
+func boats(user *player.Player) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			var isAlive bool
+			var count int
+			fmt.Fprintln(w, "Boats of", user.Pseudo, ":")
+			for _, boat := range user.Boats {
+				isAlive = false
+				for _, part := range boat.BoatParts {
+					if part == 0 {
+						isAlive = true
+					}
+				}
+				if !isAlive {
+					fmt.Fprintln(w, boat.Name, ": Destroyed")
+				} else {
+					fmt.Fprintln(w, boat.Name, ": Alive")
+					count++
+				}
+			}
+			if count == 0 {
+				fmt.Fprintln(w, "The player have lost all his boats !")
+			} else {
+				fmt.Fprintln(w, "The player have", count, "boats alive !")
+			}
+		}
 	}
+}
+
+func checkIsAlive(user *player.Player) bool {
+	var isAlive bool
+	for _, boat := range user.Boats {
+		isAlive = false
+		for _, part := range boat.BoatParts {
+			if part == 0 {
+				isAlive = true
+			}
+		}
+		if isAlive {
+			return true
+		}
+	}
+	return false
 }
 
 func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.ResponseWriter, r *http.Request) {
@@ -128,24 +201,25 @@ func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Resp
 	}
 }
 
-func sendRequest(url string, method string) {
-	req, err := http.Post(url, "application/json", nil)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer req.Body.Close()
+// func sendRequest(url string, method string) {
+// 	req, err := http.Post(url, "application/json", nil)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	defer req.Body.Close()
 
-	// var player player.Player
-	var hitReq player.HitReq
-	err = json.NewDecoder(req.Body).Decode(&hitReq)
-	if err != nil {
-		fmt.Println(err)
-	}
-}
+// 	// var player player.Player
+// 	var hitReq player.HitReq
+// 	err = json.NewDecoder(req.Body).Decode(&hitReq)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// }
 
 func startServer(port int, player *player.Player, isOccupied *[]player.Coordinates) {
+	http.HandleFunc("/get-player", getPlayer(player))
 	http.HandleFunc("/board", board(player, isOccupied))
-	http.HandleFunc("boats", boats)
+	http.HandleFunc("/boats", boats(player))
 	http.HandleFunc("/hit", hit(player, isOccupied))
 	address := strings.Join([]string{":", strconv.Itoa(port)}, "")
 	http.ListenAndServe(address, nil)
