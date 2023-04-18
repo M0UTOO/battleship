@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,7 +15,9 @@ func main() {
 	fmt.Println("Entre your name : ")
 	var name string
 	var port int
+	var check string
 	var isOccupied []player.Coordinates
+	var playerList []player.Player
 	fmt.Scanln(&name)
 	for {
 		fmt.Println("Enter your port (between 8000 and 9000) : ")
@@ -32,43 +33,91 @@ func main() {
 
 	go startServer(port, &player, &isOccupied)
 
-	fmt.Println("Do you want to send a request ? (y/n)")
-	var answer string
-	fmt.Scanln(&answer)
-	if answer == "y" {
-		for i := 8000; i < 9001; i++ {
-			if i != port {
-				go raw_connect("localhost", strconv.Itoa(i))
+	for check != "quit" {
+
+		playerList = nil
+
+		getPlayers(&playerList, port)
+
+		time.Sleep(1 * time.Second)
+
+		if len(playerList) == 0 {
+			waitingForPlayers(&playerList, port)
+		}
+
+		fmt.Println("This is the list of the players : ")
+
+		for s, player := range playerList {
+			s++
+			fmt.Println(s, ":", player.Pseudo)
+		}
+
+		fmt.Println("Which player do you want to interact with ? (Enter the number of the player or enter 'quit' to quit the game)")
+		var answer string
+		fmt.Scanln(&answer)
+
+		if answer == "quit" {
+			return
+		}
+
+		i, _ := strconv.Atoi(answer)
+
+		for s, player := range playerList {
+			if s+1 == i {
+				fmt.Println("What do you want to do with", player.Pseudo, "? (Enter 'board' to see his board, 'boats' to see his boats or 'quit' to quit the game)")
+				fmt.Scanln(&check)
+				if check == "board" {
+					fmt.Println("Here is the board of", player.Pseudo, ":")
+				} else if check == "boats" {
+					fmt.Println("Here is the boats of", player.Pseudo, ":")
+				} else {
+					fmt.Println("Invalid answer, please enter 'board', 'boats' or 'quit'")
+				}
 			}
 		}
 	}
-	time.Sleep(100 * time.Second)
 }
 
-func raw_connect(host string, port string) {
-	timeout := time.Second
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
-	if err != nil {
-		return
+func waitingForPlayers(playerList *[]player.Player, port int) {
+	for len(*playerList) == 0 {
+		fmt.Println("Waiting for players...")
+		getPlayers(playerList, port)
+		time.Sleep(10 * time.Second)
 	}
-	if conn != nil {
-		defer conn.Close()
-		url := "http://" + host + ":" + port + "/get-player"
-		req, err := http.Get(url)
-		if err != nil {
-			fmt.Println(err)
+}
+
+func getPlayers(playerList *[]player.Player, port int) {
+	for i := 8000; i < 9001; i++ {
+		if i != port {
+			go raw_connect("localhost", strconv.Itoa(i), playerList)
 		}
-		defer req.Body.Close()
 	}
+}
+
+func raw_connect(host string, port string, playerList *[]player.Player) error {
+	url := "http://" + host + ":" + port + "/get-player"
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var player player.Player
+	err = json.NewDecoder(resp.Body).Decode(&player)
+	if err != nil {
+		return err
+	}
+	*playerList = append(*playerList, player)
+	return nil
 }
 
 func getPlayer(user *player.Player) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			fmt.Printf("ok")
-			res, _ := json.Marshal(user)
-		
+			w.Header().Set("Content-Type", "application/json")
+			jsonResp, _ := json.Marshal(user)
+			w.Write(jsonResp)
 		}
 	}
 }
