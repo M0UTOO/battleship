@@ -64,12 +64,64 @@ func main() {
 
 		for s, player := range playerList {
 			if s+1 == i {
-				fmt.Println("What do you want to do with", player.Pseudo, "? (Enter 'board' to see his board, 'boats' to see his boats or 'quit' to quit the game)")
+				fmt.Println("What do you want to do with", player.Pseudo, "? (Enter 'board' to see his board, 'boats' to see his boats, 'hit' to attack or 'quit' to quit the game)")
 				fmt.Scanln(&check)
 				if check == "board" {
-					fmt.Println("Here is the board of", player.Pseudo, ":")
+					url := "http://localhost:" + strconv.Itoa(player.Port) + "/board"
+					resp, err := http.Get(url)
+					if err != nil {
+						fmt.Println(err)
+					}
+					defer resp.Body.Close()
+					var board string
+					err = json.NewDecoder(resp.Body).Decode(&board)
+					if err != nil {
+						fmt.Println(err)
+					}
+					fmt.Println(board)
 				} else if check == "boats" {
-					fmt.Println("Here is the boats of", player.Pseudo, ":")
+					url := "http://localhost:" + strconv.Itoa(player.Port) + "/boats"
+					resp, err := http.Get(url)
+					if err != nil {
+						fmt.Println(err)
+					}
+					defer resp.Body.Close()
+					var boats string
+					err = json.NewDecoder(resp.Body).Decode(&boats)
+					if err != nil {
+						fmt.Println(err)
+					}
+					fmt.Println(boats)
+				} else if check == "hit" {
+					var x int = 0
+					var y int = 0
+					for x < 1 || x > 10 {
+						fmt.Println("Enter the coordinate X of the attack (between 1 and 10) : ")
+						fmt.Scanln(&x)
+						if x < 1 || x > 10 {
+							fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
+						}
+					}
+					for y < 1 || y > 10 {
+						fmt.Println("Enter the coordinate Y of the attack (between 1 and 10) : ")
+						fmt.Scanln(&y)
+						if y < 1 || y > 10 {
+							fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
+						}
+					}
+					url := "http://localhost:" + strconv.Itoa(player.Port) + "/hit"
+					body := []byte("{\"X\":" + strconv.Itoa(x) + ",\"Y\":" + strconv.Itoa(y) + "}")
+					resp, err := http.Post(url, "application/json", strings.NewReader("{\"X\":"+strconv.Itoa(x)+",\"Y\":"+strconv.Itoa(y)+"}"))
+					if err != nil {
+						fmt.Println(err)
+					}
+					defer resp.Body.Close()
+					var hit string
+					err = json.NewDecoder(resp.Body).Decode(&hit)
+					if err != nil {
+						fmt.Println(err)
+					}
+					fmt.Println(hit)
 				} else {
 					fmt.Println("Invalid answer, please enter 'board', 'boats' or 'quit'")
 				}
@@ -107,7 +159,9 @@ func raw_connect(host string, port string, playerList *[]player.Player) error {
 	if err != nil {
 		return err
 	}
-	*playerList = append(*playerList, player)
+	if player.Pseudo != "" {
+		*playerList = append(*playerList, player)
+	}
 	return nil
 }
 
@@ -126,26 +180,26 @@ func board(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Re
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			fmt.Fprintln(w, "(O = Not Discovered | W = Water | X = Boat Hit)")
-			fmt.Fprintln(w, "Board of ", user.Pseudo, ":")
+			txt := ("(O = Not Discovered | W = Water | X = Boat Hit)\n")
+			txt += ("Board of " + user.Pseudo + ":\n")
 			var isBoat bool
 			for i := 1; i < 11; i++ {
-				fmt.Fprint(w, "|")
+				txt += ("|")
 				for j := 1; j < 11; j++ {
 					isBoat = false
 					for _, c := range *isOccupied {
 						if c.X == j && c.Y == i {
 							if c.BoatName == "Water" {
-								fmt.Fprint(w, "W")
+								txt += ("W")
 								isBoat = true
 							} else {
 								for _, boat := range user.Boats {
 									if boat.Name == c.BoatName {
 										if boat.BoatParts[c.BoatPart] == 0 {
-											fmt.Fprint(w, "O")
+											txt += ("O")
 											isBoat = true
 										} else if boat.BoatParts[c.BoatPart] == 2 {
-											fmt.Fprint(w, "X")
+											txt += ("X")
 											isBoat = true
 										}
 									}
@@ -154,12 +208,14 @@ func board(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Re
 						}
 					}
 					if !isBoat {
-						fmt.Fprint(w, "O")
+						txt += ("O")
 					}
-					fmt.Fprint(w, "|")
+					txt += ("|")
 				}
-				fmt.Fprintln(w, "")
+				txt += ("\n")
 			}
+			jsonResp, _ := json.Marshal(txt)
+			w.Write(jsonResp)
 		}
 	}
 }
@@ -170,7 +226,7 @@ func boats(user *player.Player) func(w http.ResponseWriter, r *http.Request) {
 		case "GET":
 			var isAlive bool
 			var count int
-			fmt.Fprintln(w, "Boats of", user.Pseudo, ":")
+			txt := ("Boats of " + user.Pseudo + ":\n")
 			for _, boat := range user.Boats {
 				isAlive = false
 				for _, part := range boat.BoatParts {
@@ -179,17 +235,19 @@ func boats(user *player.Player) func(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 				if !isAlive {
-					fmt.Fprintln(w, boat.Name, ": Destroyed")
+					txt += (boat.Name + ": Destroyed\n")
 				} else {
-					fmt.Fprintln(w, boat.Name, ": Alive")
+					txt += (boat.Name + ": Alive\n")
 					count++
 				}
 			}
 			if count == 0 {
-				fmt.Fprintln(w, "The player have lost all his boats !")
+				txt += ("The player have lost all his boats !\n")
 			} else {
-				fmt.Fprintln(w, "The player have", count, "boats alive !")
+				txt += ("The player still have " + strconv.Itoa(count) + " boats alive !\n")
 			}
+			jsonResp, _ := json.Marshal(txt)
+			w.Write(jsonResp)
 		}
 	}
 }
@@ -219,33 +277,32 @@ func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Resp
 			if err != nil {
 				fmt.Println(err)
 			}
-			if hit.X < 1 || hit.X > 10 || hit.Y < 1 || hit.Y > 10 {
-				fmt.Fprintln(w, "Invalid coordinates")
-				return
-			}
+			txt := ("")
 			for _, c := range *isOccupied {
 				if c.X == hit.X && c.Y == hit.Y {
 					for _, boat := range user.Boats {
 						if boat.Name == c.BoatName {
 							if boat.BoatParts[c.BoatPart] == 0 {
 								boat.BoatParts[c.BoatPart] = 2
-								fmt.Fprintln(w, "You hit a", c.BoatName)
+								txt += ("You hit a " + c.BoatName + "\n")
 								return
 							} else if boat.BoatParts[c.BoatPart] == 2 {
-								fmt.Fprintln(w, "You already hit this part of the boat")
+								txt += ("You already hit this part of the boat\n")
 								return
 							}
 						} else if c.BoatName == "Water" {
-							fmt.Fprintln(w, "You shot in the water")
+							txt += ("You already hit this part of the water\n")
 							return
 						}
 					}
 				}
 			}
-			fmt.Fprintln(w, "You shot in the water")
+			txt += ("You missed\n")
 			hit.BoatName = "Water"
 			hit.BoatPart = 0
 			*isOccupied = append(*isOccupied, hit)
+			jsonResp, _ := json.Marshal(txt)
+			w.Write(jsonResp)
 		}
 	}
 }
