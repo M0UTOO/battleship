@@ -19,7 +19,7 @@ var clear map[string]func()
 func main() {
 	// Clear the screen
 	CallClear()
-	fmt.Println("Entre your name : ")
+	fmt.Println("Enter your name : ")
 	var name string
 	var port int
 	var check string
