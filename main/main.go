@@ -31,9 +31,8 @@ func main() {
 		fmt.Scanln(&port)
 		if port < 8000 || port > 9000 {
 			fmt.Println("Invalid port, please enter a port between 8000 and 9000")
-		} else {
-			break
 		}
+		// checkIfPortIsFree(port)
 	}
 	CallClear()
 	listBoats := createBoats(&isOccupied)
@@ -104,7 +103,19 @@ func main() {
 					fmt.Println(boats)
 				} else if check == "hit" {
 					countDestroyed := 0
-					for boats := range player.Boats {
+					for boats := range listBoats {
+						isAlive := false
+						for boatParts := range listBoats[boats].BoatParts {
+							if listBoats[boats].BoatParts[boatParts] == 0 {
+								isAlive = true
+							}
+						}
+						if isAlive == false {
+							countDestroyed++
+						}
+					}
+					countDestroyedPlayer := 0
+					for boats := range listBoats {
 						isAlive := false
 						for boatParts := range player.Boats[boats].BoatParts {
 							if player.Boats[boats].BoatParts[boatParts] == 0 {
@@ -115,8 +126,9 @@ func main() {
 							countDestroyed++
 						}
 					}
-					fmt.Println(countDestroyed)
-					if countDestroyed == len(player.Boats) {
+					fmt.Println(strconv.Itoa(countDestroyed) + "For ennemy")
+					fmt.Println(strconv.Itoa(countDestroyed) + "For u")
+					if countDestroyedPlayer == len(player.Boats) {
 						fmt.Println("All your boats are destroyed, you lost the game, you cannot attack anymore")
 					} else {
 						var x int = 0
@@ -156,6 +168,11 @@ func main() {
 		}
 	}
 }
+
+// func checkIfPortIsFree(port int) {
+// 	url := "http://localhost:" + strconv.Itoa(port) + "/isFree"
+
+// }
 
 func waitingForPlayers(playerList *[]player.Player, port int) {
 	for len(*playerList) == 0 {
