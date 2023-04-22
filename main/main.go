@@ -26,13 +26,17 @@ func main() {
 	var isOccupied []player.Coordinates
 	var playerList []player.Player
 	fmt.Scanln(&name)
-	for {
+	isFree := "true"
+	for isFree != "false" {
 		fmt.Println("Enter your port (between 8000 and 9000) : ")
 		fmt.Scanln(&port)
-		if port < 8000 || port > 9000 {
+		if port < 8000 || port > 9001 {
 			fmt.Println("Invalid port, please enter a port between 8000 and 9000")
 		}
-		// checkIfPortIsFree(port)
+		isFree = checkIfPortIsFree(port)
+		if isFree == "true" {
+			fmt.Println("This port is already used, please enter another port")
+		}
 	}
 	CallClear()
 	listBoats := createBoats(&isOccupied)
@@ -175,10 +179,15 @@ func main() {
 	}
 }
 
-// func checkIfPortIsFree(port int) {
-// 	url := "http://localhost:" + strconv.Itoa(port) + "/isFree"
-
-// }
+func checkIfPortIsFree(port int) string {
+	url := "http://localhost:" + strconv.Itoa(port) + "/isFree"
+	resp, err := http.Get(url)
+	if err != nil {
+		return "false"
+	}
+	defer resp.Body.Close()
+	return "true"
+}
 
 func waitingForPlayers(playerList *[]player.Player, port int) {
 	for len(*playerList) == 0 {
@@ -396,7 +405,15 @@ func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Resp
 // 	}
 // }
 
+func isFree(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+
+	}
+}
+
 func startServer(port int, player *player.Player, isOccupied *[]player.Coordinates) {
+	http.HandleFunc("/IsFree", isFree)
 	http.HandleFunc("/get-player", getPlayer(player))
 	http.HandleFunc("/board", board(player, isOccupied))
 	http.HandleFunc("/boats", boats(player))
