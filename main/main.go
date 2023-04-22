@@ -161,7 +161,13 @@ func main() {
 						}
 						fmt.Println(hit)
 					}
-				} else {
+				} else if check == "whereAreMyBoats?" {
+
+					for _, coordinate := range isOccupied {
+						println("Boat name : ", coordinate.BoatName, " : ",coordinate.X, coordinate.Y)
+					}
+
+				}else {
 					fmt.Println("Invalid answer, please enter 'board', 'boats', 'hit' or 'quit'")
 				}
 			}
