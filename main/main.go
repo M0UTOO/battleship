@@ -76,103 +76,110 @@ func main() {
 
 		for s, player := range playerList {
 			if s+1 == i {
-				fmt.Println("What do you want to do with", player.Pseudo, "? (Enter 'board' to see his board, 'boats' to see his boats, 'hit' to attack or 'quit' to quit the game)")
-				fmt.Scanln(&check)
-				CallClear()
-				if check == "board" {
-					url := "http://localhost:" + strconv.Itoa(player.Port) + "/board"
-					resp, err := http.Get(url)
-					if err != nil {
-						fmt.Println(err)
-					}
-					defer resp.Body.Close()
-					var board string
-					err = json.NewDecoder(resp.Body).Decode(&board)
-					if err != nil {
-						fmt.Println(err)
-					}
-					fmt.Println(board)
-				} else if check == "boats" {
-					url := "http://localhost:" + strconv.Itoa(player.Port) + "/boats"
-					resp, err := http.Get(url)
-					if err != nil {
-						fmt.Println(err)
-					}
-					defer resp.Body.Close()
-					var boats string
-					err = json.NewDecoder(resp.Body).Decode(&boats)
-					if err != nil {
-						fmt.Println(err)
-					}
-					fmt.Println(boats)
-				} else if check == "hit" {
-					countDestroyed := 0
-					for boats := range listBoats {
-						isAlive := false
-						for boatParts := range listBoats[boats].BoatParts {
-							if listBoats[boats].BoatParts[boatParts] == 0 {
-								isAlive = true
-							}
-						}
-						if isAlive == false {
-							countDestroyed++
-						}
-					}
-					countDestroyedPlayer := 0
-					for boats := range listBoats {
-						isAlive := false
-						for boatParts := range player.Boats[boats].BoatParts {
-							if player.Boats[boats].BoatParts[boatParts] == 0 {
-								isAlive = true
-							}
-						}
-						if isAlive == false {
-							countDestroyedPlayer++
-						}
-					}
-					fmt.Println(strconv.Itoa(countDestroyed) + "For ennemy")
-					fmt.Println(strconv.Itoa(countDestroyed) + "For u")
-					if countDestroyedPlayer == len(player.Boats) {
-						fmt.Println("All your boats are destroyed, you lost the game, you cannot attack anymore")
-					} else {
-						var x int = 0
-						var y int = 0
-						for x < 1 || x > 10 {
-							fmt.Println("Enter the coordinate X of the attack (between 1 and 10) : ")
-							fmt.Scanln(&x)
-							if x < 1 || x > 10 {
-								fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
-							}
-						}
-						for y < 1 || y > 10 {
-							fmt.Println("Enter the coordinate Y of the attack (between 1 and 10) : ")
-							fmt.Scanln(&y)
-							if y < 1 || y > 10 {
-								fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
-							}
-						}
-						url := "http://localhost:" + strconv.Itoa(player.Port) + "/hit"
-						body := []byte(`{"x":` + strconv.Itoa(x) + `,"y":` + strconv.Itoa(y) + `}`)
-						resp, err := http.Post(url, "application/json", strings.NewReader(string(body)))
+				for check != "return" {
+					fmt.Println("What do you want to do with " + player.Pseudo + ":")
+					fmt.Println("\"board\" - Show the board of " + player.Pseudo)
+					fmt.Println("\"boats\" - Show the boats of " + player.Pseudo)
+					fmt.Println("\"hit\" - Attack " + player.Pseudo + " (you will have to enter the coordinates of the boat you want to attack)")
+					fmt.Println("\"return\" - Return to the list of players")
+					fmt.Println("\"quit\" - Quit the game")
+					fmt.Scanln(&check)
+					CallClear()
+					if check == "board" || check == "Board" {
+						url := "http://localhost:" + strconv.Itoa(player.Port) + "/board"
+						resp, err := http.Get(url)
 						if err != nil {
 							fmt.Println(err)
 						}
 						defer resp.Body.Close()
-						var hit string
-						err = json.NewDecoder(resp.Body).Decode(&hit)
+						var board string
+						err = json.NewDecoder(resp.Body).Decode(&board)
 						if err != nil {
 							fmt.Println(err)
 						}
-						fmt.Println(hit)
-					}
-				} else if check == "whereAreMyBoats?" {
+						fmt.Println(board)
+					} else if check == "boats" || check == "Boats" {
+						url := "http://localhost:" + strconv.Itoa(player.Port) + "/boats"
+						resp, err := http.Get(url)
+						if err != nil {
+							fmt.Println(err)
+						}
+						defer resp.Body.Close()
+						var boats string
+						err = json.NewDecoder(resp.Body).Decode(&boats)
+						if err != nil {
+							fmt.Println(err)
+						}
+						fmt.Println(boats)
+					} else if check == "hit" || check == "Hit" {
+						countDestroyed := 0
+						for boats := range listBoats {
+							isAlive := false
+							for boatParts := range listBoats[boats].BoatParts {
+								if listBoats[boats].BoatParts[boatParts] == 0 {
+									isAlive = true
+								}
+							}
+							if isAlive == false {
+								countDestroyed++
+							}
+						}
+						countDestroyedPlayer := 0
+						for boats := range listBoats {
+							isAlive := false
+							for boatParts := range player.Boats[boats].BoatParts {
+								if player.Boats[boats].BoatParts[boatParts] == 0 {
+									isAlive = true
+								}
+							}
+							if isAlive == false {
+								countDestroyedPlayer++
+							}
+						}
+						fmt.Println(strconv.Itoa(countDestroyed) + "For ennemy")
+						fmt.Println(strconv.Itoa(countDestroyed) + "For u")
+						if countDestroyedPlayer == len(player.Boats) {
+							fmt.Println("All your boats are destroyed, you lost the game, you cannot attack anymore")
+						} else {
+							var x int = 0
+							var y int = 0
+							for x < 1 || x > 10 {
+								fmt.Println("Enter the coordinate X of the attack (between 1 and 10) : ")
+								fmt.Scanln(&x)
+								if x < 1 || x > 10 {
+									fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
+								}
+							}
+							for y < 1 || y > 10 {
+								fmt.Println("Enter the coordinate Y of the attack (between 1 and 10) : ")
+								fmt.Scanln(&y)
+								if y < 1 || y > 10 {
+									fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
+								}
+							}
+							url := "http://localhost:" + strconv.Itoa(player.Port) + "/hit"
+							body := []byte(`{"x":` + strconv.Itoa(x) + `,"y":` + strconv.Itoa(y) + `}`)
+							resp, err := http.Post(url, "application/json", strings.NewReader(string(body)))
+							if err != nil {
+								fmt.Println(err)
+							}
+							defer resp.Body.Close()
+							var hit string
+							err = json.NewDecoder(resp.Body).Decode(&hit)
+							if err != nil {
+								fmt.Println(err)
+							}
+							fmt.Println(hit)
+						}
+					} else if check == "whereAreMyBoats?" {
 
-					for _, coordinate := range isOccupied {
-						println("Boat name : ", coordinate.BoatName, " : ",coordinate.X, coordinate.Y)
-					}
+						for _, coordinate := range isOccupied {
+							println("Boat name : ", coordinate.BoatName, " : ", coordinate.X, coordinate.Y)
+						}
 
-				}else {
-					fmt.Println("Invalid answer, please enter 'board', 'boats', 'hit' or 'quit'")
+					} else {
+						fmt.Println("Invalid answer, please enter 'board', 'boats', 'hit' or 'quit'")
+					}
 				}
 			}
 		}
