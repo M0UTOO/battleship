@@ -74,8 +74,11 @@ func main() {
 
 		i, _ := strconv.Atoi(answer)
 
+		check = ""
+
 		for s, player := range playerList {
 			if s+1 == i {
+				var isConnected bool = true
 				for check != "return" {
 					fmt.Println("What do you want to do with " + player.Pseudo + ":")
 					fmt.Println("\"board\" - Show the board of " + player.Pseudo)
@@ -87,30 +90,16 @@ func main() {
 					CallClear()
 					if check == "board" || check == "Board" {
 						url := "http://localhost:" + strconv.Itoa(player.Port) + "/board"
-						resp, err := http.Get(url)
-						if err != nil {
-							fmt.Println(err)
+						isConnected = getRouteInfo(url, "board", player.Pseudo, nil)
+						if isConnected == false {
+							check = "return"
 						}
-						defer resp.Body.Close()
-						var board string
-						err = json.NewDecoder(resp.Body).Decode(&board)
-						if err != nil {
-							fmt.Println(err)
-						}
-						fmt.Println(board)
 					} else if check == "boats" || check == "Boats" {
 						url := "http://localhost:" + strconv.Itoa(player.Port) + "/boats"
-						resp, err := http.Get(url)
-						if err != nil {
-							fmt.Println(err)
+						isConnected = getRouteInfo(url, "boats", player.Pseudo, nil)
+						if isConnected == false {
+							check = "return"
 						}
-						defer resp.Body.Close()
-						var boats string
-						err = json.NewDecoder(resp.Body).Decode(&boats)
-						if err != nil {
-							fmt.Println(err)
-						}
-						fmt.Println(boats)
 					} else if check == "hit" || check == "Hit" {
 						countDestroyed := 0
 						for boats := range listBoats {
@@ -136,10 +125,10 @@ func main() {
 								countDestroyedPlayer++
 							}
 						}
-						fmt.Println(strconv.Itoa(countDestroyed) + "For ennemy")
-						fmt.Println(strconv.Itoa(countDestroyed) + "For u")
 						if countDestroyedPlayer == len(player.Boats) {
 							fmt.Println("All your boats are destroyed, you lost the game, you cannot attack anymore")
+						} else if countDestroyed == len(player.Boats) {
+							fmt.Println("All the boats of " + player.Pseudo + " are destroyed, you won the game, you cannot attack anymore")
 						} else {
 							var x int = 0
 							var y int = 0
@@ -159,17 +148,10 @@ func main() {
 							}
 							url := "http://localhost:" + strconv.Itoa(player.Port) + "/hit"
 							body := []byte(`{"x":` + strconv.Itoa(x) + `,"y":` + strconv.Itoa(y) + `}`)
-							resp, err := http.Post(url, "application/json", strings.NewReader(string(body)))
-							if err != nil {
-								fmt.Println(err)
+							isConnected = getRouteInfo(url, "hit", player.Pseudo, body)
+							if isConnected == false {
+								check = "return"
 							}
-							defer resp.Body.Close()
-							var hit string
-							err = json.NewDecoder(resp.Body).Decode(&hit)
-							if err != nil {
-								fmt.Println(err)
-							}
-							fmt.Println(hit)
 						}
 					} else if check == "whereAreMyBoats?" {
 
@@ -178,12 +160,36 @@ func main() {
 						}
 
 					} else {
-						fmt.Println("Invalid answer, please enter 'board', 'boats', 'hit' or 'quit'")
+						if check != "return" && check != "quit" {
+							fmt.Println("Invalid answer, please enter 'board', 'boats', 'hit' or 'quit'")
+						}
 					}
 				}
 			}
 		}
 	}
+}
+
+func getRouteInfo(url string, route string, pseudo string, body []byte) bool {
+	resp := &http.Response{}
+	var err error
+	if route == "hit" {
+		resp, err = http.Post(url, "application/json", strings.NewReader(string(body)))
+	} else {
+		resp, err = http.Get(url)
+	}
+	if err != nil {
+		fmt.Println(pseudo + " is not connected anymore (I think he/she rage quit...)\n")
+		return false
+	}
+	defer resp.Body.Close()
+	var res string
+	err = json.NewDecoder(resp.Body).Decode(&res)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(res)
+	return true
 }
 
 func checkIfPortIsFree(port int) string {
@@ -375,6 +381,15 @@ func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Resp
 							if boat.BoatParts[c.BoatPart] == 0 {
 								boat.BoatParts[c.BoatPart] = 2
 								txt += ("You hit a " + c.BoatName + "\n")
+								isDestroyed := true
+								for _, part := range boat.BoatParts {
+									if part != 2 {
+										isDestroyed = false
+									}
+								}
+								if isDestroyed {
+									txt += ("You destroyed a " + c.BoatName + " !\n")
+								}
 							} else if boat.BoatParts[c.BoatPart] == 2 {
 								txt += ("You already hit this part of the boat\n")
 							}
