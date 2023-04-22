@@ -123,7 +123,7 @@ func main() {
 							}
 						}
 						if isAlive == false {
-							countDestroyed++
+							countDestroyedPlayer++
 						}
 					}
 					fmt.Println(strconv.Itoa(countDestroyed) + "For ennemy")
