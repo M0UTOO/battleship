@@ -5,9 +5,15 @@ func Hello() {
 }
 
 type Player struct {
-	Pseudo string
-	Port   int
-	Boats  []Boat
+	Pseudo            string
+	Port              int
+	Boats             []Boat
+	OGrenade          bool
+	XGrenade          bool
+	Nuke              bool
+	Heal              bool
+	Combo             int
+	BoatPartDestroyed int
 }
 
 type Boat struct {

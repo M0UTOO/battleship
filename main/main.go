@@ -32,15 +32,16 @@ func main() {
 		fmt.Scanln(&port)
 		if port < 8000 || port > 9001 {
 			fmt.Println("Invalid port, please enter a port between 8000 and 9000")
-		}
-		isFree = checkIfPortIsFree(port)
-		if isFree == "true" {
-			fmt.Println("This port is already used, please enter another port")
+		} else {
+			isFree = checkIfPortIsFree(port)
+			if isFree == "true" {
+				fmt.Println("This port is already used, please enter another port")
+			}
 		}
 	}
 	CallClear()
 	listBoats := createBoats(&isOccupied)
-	player := player.Player{name, port, listBoats}
+	player := player.Player{name, port, listBoats, false, false, false, true, 0, 0}
 
 	go startServer(port, &player, &isOccupied)
 
@@ -57,111 +58,230 @@ func main() {
 			CallClear()
 		}
 
-		fmt.Println("This is the list of the players : ")
+		for check != "menu" {
+			fmt.Println("Menu :")
+			fmt.Println("\"play\" - Interact with others players")
+			fmt.Println("\"weapons\" - See your available weapons")
+			fmt.Println("\"heal\" - Select a boat to heal")
+			fmt.Println("\"board\" - See your current board")
+			fmt.Println("\"quit\" - Quit the game")
+			fmt.Scanln(&check)
 
-		for s, player := range playerList {
-			s++
-			fmt.Println(s, ":", player.Pseudo)
-		}
+			CallClear()
 
-		fmt.Println("Which player do you want to interact with ? (Enter the number of the player or enter 'quit' to quit the game)")
-		var answer string
-		fmt.Scanln(&answer)
+			if check == "weapons" {
+				if player.XGrenade == true {
+					fmt.Println("X Grenade (1) - Can be activated")
+				} else {
+					fmt.Println("X Grenade (0) - Need a combo of 3 to be activated")
+				}
+				if player.OGrenade == true {
+					fmt.Println("x9 Grenade (1) - Can be activated")
+				} else {
+					fmt.Println("x9 Grenade (0) - Need a combo of 5 to be activated")
+				}
+				if player.Nuke == true {
+					fmt.Println("Nuke Grenade (1) - Can be activated")
+				} else {
+					fmt.Println("Nuke Grenade (0) - Where do I find this...?")
+				}
+				if player.Heal == true {
+					fmt.Println("Heal (1) - Can be activated")
+				} else {
+					fmt.Println("Heal (0) - Need to destory " + strconv.Itoa(10-player.Combo) + " more boats parts")
+				}
+				fmt.Println("")
+			}
 
-		if answer == "quit" {
-			return
-		}
-
-		i, _ := strconv.Atoi(answer)
-
-		check = ""
-
-		for s, player := range playerList {
-			if s+1 == i {
-				var isConnected bool = true
-				for check != "return" {
-					fmt.Println("What do you want to do with " + player.Pseudo + ":")
-					fmt.Println("\"board\" - Show the board of " + player.Pseudo)
-					fmt.Println("\"boats\" - Show the boats of " + player.Pseudo)
-					fmt.Println("\"hit\" - Attack " + player.Pseudo + " (you will have to enter the coordinates of the boat you want to attack)")
-					fmt.Println("\"return\" - Return to the list of players")
-					fmt.Println("\"quit\" - Quit the game")
-					fmt.Scanln(&check)
-					CallClear()
-					if check == "board" || check == "Board" {
-						url := "http://localhost:" + strconv.Itoa(player.Port) + "/board"
-						isConnected = getRouteInfo(url, "board", player.Pseudo, nil)
-						if isConnected == false {
-							check = "return"
-						}
-					} else if check == "boats" || check == "Boats" {
-						url := "http://localhost:" + strconv.Itoa(player.Port) + "/boats"
-						isConnected = getRouteInfo(url, "boats", player.Pseudo, nil)
-						if isConnected == false {
-							check = "return"
-						}
-					} else if check == "hit" || check == "Hit" {
-						countDestroyed := 0
-						for boats := range listBoats {
-							isAlive := false
-							for boatParts := range listBoats[boats].BoatParts {
-								if listBoats[boats].BoatParts[boatParts] == 0 {
+			if check == "heal" {
+				if player.Heal == true {
+					for check != "back" {
+						isAlive := false
+						count := 0
+						for _, boat := range player.Boats {
+							isAlive = false
+							for _, part := range boat.BoatParts {
+								if part == 0 {
 									isAlive = true
 								}
 							}
-							if isAlive == false {
-								countDestroyed++
+							if !isAlive {
+								fmt.Println(boat.Name + ": Destroyed\n")
+							} else {
+								fmt.Println(boat.Name + ": Alive\n")
+								count++
 							}
 						}
-						countDestroyedPlayer := 0
-						for boats := range listBoats {
-							isAlive := false
-							for boatParts := range player.Boats[boats].BoatParts {
-								if player.Boats[boats].BoatParts[boatParts] == 0 {
-									isAlive = true
-								}
-							}
-							if isAlive == false {
-								countDestroyedPlayer++
-							}
-						}
-						if countDestroyedPlayer == len(player.Boats) {
-							fmt.Println("All your boats are destroyed, you lost the game, you cannot attack anymore")
-						} else if countDestroyed == len(player.Boats) {
-							fmt.Println("All the boats of " + player.Pseudo + " are destroyed, you won the game, you cannot attack anymore")
+						if count == 0 {
+							fmt.Println("You can't heal your boats, they are all destroyed\n")
+							check = "back"
+						} else if count == 5 {
+							fmt.Println("All your boats are alive, you don't need to heal them\n")
+							check = "back"
 						} else {
-							var x int = 0
-							var y int = 0
-							for x < 1 || x > 10 {
-								fmt.Println("Enter the coordinate X of the attack (between 1 and 10) : ")
-								fmt.Scanln(&x)
-								if x < 1 || x > 10 {
-									fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
+							fmt.Println("You still have " + strconv.Itoa(count) + " alive which one do you want to heal ?\n")
+							fmt.Println("\"Carrier\" - Heal your carrier")
+							fmt.Println("\"Battleship\" - Heal your battleship")
+							fmt.Println("\"Cruiser\" - Heal your cruiser")
+							fmt.Println("\"Destroyer\" - Heal your destroyer")
+							fmt.Println("\"Submarine\" - Heal your submarine")
+							fmt.Println("\"back\" - Go back to the menu")
+							fmt.Scanln(&check)
+							CallClear()
+							if check == "Carrier" || check == "Battleship" || check == "Cruiser" || check == "Destroyer" || check == "Submarine" {
+								checkIfHealable := true
+								for _, boat := range player.Boats {
+									if check == boat.Name {
+										for _, part := range boat.BoatParts {
+											if part == 0 {
+												checkIfHealable = false
+											}
+										}
+										if checkIfHealable == true {
+											for _, part := range boat.BoatParts {
+												boat.BoatParts[part] = 0
+											}
+											fmt.Println("Your " + check + " have been healed\n")
+											player.Heal = false
+											player.BoatPartDestroyed = 0
+											check = "back"
+										} else {
+											fmt.Println("Your " + check + " is not destroyed\n")
+										}
+									}
 								}
 							}
-							for y < 1 || y > 10 {
-								fmt.Println("Enter the coordinate Y of the attack (between 1 and 10) : ")
-								fmt.Scanln(&y)
-								if y < 1 || y > 10 {
-									fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
+						}
+					}
+				} else {
+					fmt.Println("You don't have an available heal for now, go destroy " + strconv.Itoa(10-player.BoatPartDestroyed) + " more boat parts !\n")
+				}
+			}
+
+			if check == "play" {
+
+				playerList = nil
+
+				getPlayers(&playerList, port)
+
+				time.Sleep(1 * time.Second)
+
+				if len(playerList) == 0 {
+					waitingForPlayers(&playerList, port)
+					CallClear()
+				}
+
+				fmt.Println("This is the list of the players : ")
+
+				for s, player := range playerList {
+					s++
+					fmt.Println(s, ":", player.Pseudo)
+				}
+
+				fmt.Println("Which player do you want to interact with ?")
+				fmt.Println("\"number of the player\" - Interact with this player")
+				fmt.Println("\"menu\" - Go back to the menu")
+				fmt.Println("\"quit\" - Quit the game")
+				var answer string
+				fmt.Scanln(&answer)
+
+				if answer == "quit" {
+					return
+				}
+
+				i, _ := strconv.Atoi(answer)
+
+				check = ""
+
+				for s, player := range playerList {
+					if s+1 == i {
+						var isConnected bool = true
+						for check != "return" {
+							fmt.Println(player.BoatPartDestroyed)
+							fmt.Println("What do you want to do with " + player.Pseudo + ":")
+							fmt.Println("\"board\" - Show the board of " + player.Pseudo)
+							fmt.Println("\"boats\" - Show the boats of " + player.Pseudo)
+							fmt.Println("\"hit\" - Attack " + player.Pseudo + " (you will have to enter the coordinates of the boat you want to attack)")
+							fmt.Println("\"return\" - Go back to the menu")
+							fmt.Println("\"quit\" - Quit the game")
+							fmt.Scanln(&check)
+							CallClear()
+							if check == "board" || check == "Board" {
+								url := "http://localhost:" + strconv.Itoa(player.Port) + "/board"
+								isConnected = getRouteInfo(url, "board", player.Pseudo, nil, nil)
+								if isConnected == false {
+									check = "return"
+								}
+							} else if check == "boats" || check == "Boats" {
+								url := "http://localhost:" + strconv.Itoa(player.Port) + "/boats"
+								isConnected = getRouteInfo(url, "boats", player.Pseudo, nil, nil)
+								if isConnected == false {
+									check = "return"
+								}
+							} else if check == "hit" || check == "Hit" {
+								countDestroyed := 0
+								for boats := range listBoats {
+									isAlive := false
+									for boatParts := range listBoats[boats].BoatParts {
+										if listBoats[boats].BoatParts[boatParts] == 0 {
+											isAlive = true
+										}
+									}
+									if isAlive == false {
+										countDestroyed++
+									}
+								}
+								countDestroyedPlayer := 0
+								for boats := range listBoats {
+									isAlive := false
+									for boatParts := range player.Boats[boats].BoatParts {
+										if player.Boats[boats].BoatParts[boatParts] == 0 {
+											isAlive = true
+										}
+									}
+									if isAlive == false {
+										countDestroyedPlayer++
+									}
+								}
+								if countDestroyedPlayer == len(player.Boats) {
+									fmt.Println("All your boats are destroyed, you lost the game, you cannot attack anymore")
+								} else if countDestroyed == len(player.Boats) {
+									fmt.Println("All the boats of " + player.Pseudo + " are destroyed, you won the game, you cannot attack anymore")
+								} else {
+									var x int = 0
+									var y int = 0
+									for x < 1 || x > 10 {
+										fmt.Println("Enter the coordinate X of the attack (between 1 and 10) : ")
+										fmt.Scanln(&x)
+										if x < 1 || x > 10 {
+											fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
+										}
+									}
+									for y < 1 || y > 10 {
+										fmt.Println("Enter the coordinate Y of the attack (between 1 and 10) : ")
+										fmt.Scanln(&y)
+										if y < 1 || y > 10 {
+											fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
+										}
+									}
+									url := "http://localhost:" + strconv.Itoa(player.Port) + "/hit"
+									body := []byte(`{"x":` + strconv.Itoa(x) + `,"y":` + strconv.Itoa(y) + `}`)
+									isConnected = getRouteInfo(url, "hit", player.Pseudo, body, &player)
+									if isConnected == false {
+										check = "return"
+									}
+								}
+							} else if check == "whereAreMyBoats?" {
+
+								for _, coordinate := range isOccupied {
+									println("Boat name : ", coordinate.BoatName, " : ", coordinate.X, coordinate.Y)
+								}
+
+							} else {
+								if check != "return" && check != "quit" {
+									fmt.Println("Invalid answer, please enter 'board', 'boats', 'hit' or 'quit'")
 								}
 							}
-							url := "http://localhost:" + strconv.Itoa(player.Port) + "/hit"
-							body := []byte(`{"x":` + strconv.Itoa(x) + `,"y":` + strconv.Itoa(y) + `}`)
-							isConnected = getRouteInfo(url, "hit", player.Pseudo, body)
-							if isConnected == false {
-								check = "return"
-							}
-						}
-					} else if check == "whereAreMyBoats?" {
-
-						for _, coordinate := range isOccupied {
-							println("Boat name : ", coordinate.BoatName, " : ", coordinate.X, coordinate.Y)
-						}
-
-					} else {
-						if check != "return" && check != "quit" {
-							fmt.Println("Invalid answer, please enter 'board', 'boats', 'hit' or 'quit'")
 						}
 					}
 				}
@@ -170,7 +290,7 @@ func main() {
 	}
 }
 
-func getRouteInfo(url string, route string, pseudo string, body []byte) bool {
+func getRouteInfo(url string, route string, pseudo string, body []byte, user *player.Player) bool {
 	resp := &http.Response{}
 	var err error
 	if route == "hit" {
@@ -187,6 +307,12 @@ func getRouteInfo(url string, route string, pseudo string, body []byte) bool {
 	err = json.NewDecoder(resp.Body).Decode(&res)
 	if err != nil {
 		fmt.Println(err)
+	}
+	if strings.Contains(res, "You hit a") {
+		user.BoatPartDestroyed += 1
+		if user.BoatPartDestroyed == 10 {
+			user.Heal = true
+		}
 	}
 	fmt.Println(res)
 	return true
