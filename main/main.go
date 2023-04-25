@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/enescakir/emoji"
 )
 
 var clear map[string]func()
@@ -41,7 +43,7 @@ func main() {
 	}
 	CallClear()
 	listBoats := createBoats(&isOccupied)
-	player := player.Player{name, port, listBoats, false, false, false, true, 0, 0}
+	player := player.Player{name, port, listBoats, false, false, false, false, 0, 0}
 
 	go startServer(port, &player, &isOccupied)
 
@@ -155,6 +157,51 @@ func main() {
 					}
 				} else {
 					fmt.Println("You don't have an available heal for now, go destroy " + strconv.Itoa(10-player.BoatPartDestroyed) + " more boat parts !\n")
+				}
+			}
+
+			if check == "???" {
+				CallClear()
+				fmt.Println("Welcome in the secret zone. Here you can type some controller input to get some secret stuff !\n")
+				for check != "back" {
+					fmt.Println("This is how it works, you have all this inputs :\n")
+					fmt.Println("\"U\" - Up " + emoji.UpArrow)
+					fmt.Println("\"L\" - Left " + emoji.LeftArrow)
+					fmt.Println("\"R\" - Right " + emoji.RightArrow)
+					fmt.Println("\"D\" - Down " + emoji.DownArrow)
+					fmt.Println("\"A\" - A button " + emoji.AButtonBloodType)
+					fmt.Println("\"B\" - B button " + emoji.BButtonBloodType)
+					fmt.Println("\"S\" - Start " + emoji.PlayButton)
+					fmt.Println("")
+					fmt.Println("\"back\" - Go back to the menu\n")
+					fmt.Println("You can combine them to get some secret stuff !\n")
+					fmt.Println("For example, if you type \"SBABA\" you will get a secret message !\n")
+					fmt.Scanln(&check)
+
+					if check == "UUDDLRLRBAS" {
+						if player.Nuke == false {
+							CallClear()
+							fmt.Println("You found the Konami code !\n")
+							fmt.Println("You can now use the nuke to make some big damage !\n")
+							player.Nuke = true
+						} else {
+							CallClear()
+							fmt.Println("You already found the Konami code !\n")
+							fmt.Println("You can now use the nuke to make some big damage !\n")
+						}
+
+					} else if check == "SBABA" {
+						CallClear()
+						fmt.Println("You found the secret message !\n")
+						fmt.Println("I hear that if u type a famous gaming code, you can get a nuke !\n")
+
+					} else if check == "back" {
+						CallClear()
+
+					} else {
+						CallClear()
+						fmt.Println("This is not a valid code try again :)\n")
+					}
 				}
 			}
 
