@@ -43,9 +43,9 @@ func main() {
 	}
 	CallClear()
 	listBoats := createBoats(&isOccupied)
-	player := player.Player{name, port, listBoats, false, false, false, false, 0, 0}
+	user := player.Player{name, port, listBoats, false, false, false, false, 0, 0}
 
-	go startServer(port, &player, &isOccupied)
+	go startServer(port, &user, &isOccupied)
 
 	for check != "quit" {
 
@@ -66,41 +66,42 @@ func main() {
 			fmt.Println("\"weapons\" - See your available weapons")
 			fmt.Println("\"heal\" - Select a boat to heal")
 			fmt.Println("\"board\" - See your current board")
+			fmt.Println("\"???\" - ???")
 			fmt.Println("\"quit\" - Quit the game")
 			fmt.Scanln(&check)
 
 			CallClear()
 
 			if check == "weapons" {
-				if player.XGrenade == true {
+				if user.XGrenade == true {
 					fmt.Println("X Grenade (1) - Can be activated")
 				} else {
-					fmt.Println("X Grenade (0) - Need a combo of 3 to be activated")
+					fmt.Println("X Grenade (0) - Need a combo of 3 to be activated - Current combo : " + strconv.Itoa(user.Combo))
 				}
-				if player.OGrenade == true {
+				if user.OGrenade == true {
 					fmt.Println("x9 Grenade (1) - Can be activated")
 				} else {
-					fmt.Println("x9 Grenade (0) - Need a combo of 5 to be activated")
+					fmt.Println("x9 Grenade (0) - Need a combo of 5 to be activated - Current combo : " + strconv.Itoa(user.Combo))
 				}
-				if player.Nuke == true {
+				if user.Nuke == true {
 					fmt.Println("Nuke Grenade (1) - Can be activated")
 				} else {
 					fmt.Println("Nuke Grenade (0) - Where do I find this...?")
 				}
-				if player.Heal == true {
+				if user.Heal == true {
 					fmt.Println("Heal (1) - Can be activated")
 				} else {
-					fmt.Println("Heal (0) - Need to destory " + strconv.Itoa(10-player.Combo) + " more boats parts")
+					fmt.Println("Heal (0) - Need to destory " + strconv.Itoa(10-user.BoatPartDestroyed) + " more boats parts")
 				}
 				fmt.Println("")
 			}
 
 			if check == "heal" {
-				if player.Heal == true {
+				if user.Heal == true {
 					for check != "back" {
 						isAlive := false
 						count := 0
-						for _, boat := range player.Boats {
+						for _, boat := range user.Boats {
 							isAlive = false
 							for _, part := range boat.BoatParts {
 								if part == 0 {
@@ -132,7 +133,7 @@ func main() {
 							CallClear()
 							if check == "Carrier" || check == "Battleship" || check == "Cruiser" || check == "Destroyer" || check == "Submarine" {
 								checkIfHealable := true
-								for _, boat := range player.Boats {
+								for _, boat := range user.Boats {
 									if check == boat.Name {
 										for _, part := range boat.BoatParts {
 											if part == 0 {
@@ -144,8 +145,8 @@ func main() {
 												boat.BoatParts[part] = 0
 											}
 											fmt.Println("Your " + check + " have been healed\n")
-											player.Heal = false
-											player.BoatPartDestroyed = 0
+											user.Heal = false
+											user.BoatPartDestroyed = 0
 											check = "back"
 										} else {
 											fmt.Println("Your " + check + " is not destroyed\n")
@@ -156,8 +157,47 @@ func main() {
 						}
 					}
 				} else {
-					fmt.Println("You don't have an available heal for now, go destroy " + strconv.Itoa(10-player.BoatPartDestroyed) + " more boat parts !\n")
+					fmt.Println("You don't have an available heal for now, go destroy " + strconv.Itoa(10-user.BoatPartDestroyed) + " more boat parts !\n")
 				}
+			}
+
+			if check == "board" {
+				fmt.Println("\n(O = Not Discovered | W = Water | X = Boat Hit)\n")
+				fmt.Println("Your board :")
+				var isBoat bool
+				for i := 1; i < 11; i++ {
+					fmt.Printf("|")
+					for j := 1; j < 11; j++ {
+						isBoat = false
+						for _, c := range isOccupied {
+							if c.X == j && c.Y == i {
+								if c.BoatName == "Water" {
+									fmt.Printf("W")
+									isBoat = true
+
+								} else {
+									for _, boat := range user.Boats {
+										if boat.Name == c.BoatName {
+											if boat.BoatParts[c.BoatPart] == 0 {
+												fmt.Printf("O")
+												isBoat = true
+											} else if boat.BoatParts[c.BoatPart] == 2 {
+												fmt.Printf("X")
+												isBoat = true
+											}
+										}
+									}
+								}
+							}
+						}
+						if !isBoat {
+							fmt.Printf("O")
+						}
+						fmt.Printf("|")
+					}
+					fmt.Printf("\n")
+				}
+				fmt.Printf("\n\n")
 			}
 
 			if check == "???" {
@@ -179,11 +219,11 @@ func main() {
 					fmt.Scanln(&check)
 
 					if check == "UUDDLRLRBAS" {
-						if player.Nuke == false {
+						if user.Nuke == false {
 							CallClear()
 							fmt.Println("You found the Konami code !\n")
 							fmt.Println("You can now use the nuke to make some big damage !\n")
-							player.Nuke = true
+							user.Nuke = true
 						} else {
 							CallClear()
 							fmt.Println("You already found the Konami code !\n")
@@ -244,7 +284,6 @@ func main() {
 					if s+1 == i {
 						var isConnected bool = true
 						for check != "return" {
-							fmt.Println(player.BoatPartDestroyed)
 							fmt.Println("What do you want to do with " + player.Pseudo + ":")
 							fmt.Println("\"board\" - Show the board of " + player.Pseudo)
 							fmt.Println("\"boats\" - Show the boats of " + player.Pseudo)
@@ -255,13 +294,13 @@ func main() {
 							CallClear()
 							if check == "board" || check == "Board" {
 								url := "http://localhost:" + strconv.Itoa(player.Port) + "/board"
-								isConnected = getRouteInfo(url, "board", player.Pseudo, nil, nil)
+								isConnected = getRouteInfo(url, "board", player.Pseudo, nil, &user)
 								if isConnected == false {
 									check = "return"
 								}
 							} else if check == "boats" || check == "Boats" {
 								url := "http://localhost:" + strconv.Itoa(player.Port) + "/boats"
-								isConnected = getRouteInfo(url, "boats", player.Pseudo, nil, nil)
+								isConnected = getRouteInfo(url, "boats", player.Pseudo, nil, &user)
 								if isConnected == false {
 									check = "return"
 								}
@@ -313,7 +352,7 @@ func main() {
 									}
 									url := "http://localhost:" + strconv.Itoa(player.Port) + "/hit"
 									body := []byte(`{"x":` + strconv.Itoa(x) + `,"y":` + strconv.Itoa(y) + `}`)
-									isConnected = getRouteInfo(url, "hit", player.Pseudo, body, &player)
+									isConnected = getRouteInfo(url, "hit", player.Pseudo, body, &user)
 									if isConnected == false {
 										check = "return"
 									}
@@ -357,10 +396,24 @@ func getRouteInfo(url string, route string, pseudo string, body []byte, user *pl
 	}
 	if strings.Contains(res, "You hit a") {
 		user.BoatPartDestroyed += 1
+		user.Combo += 1
+		if user.Combo == 3 {
+			user.XGrenade = true
+		} else if user.Combo == 5 {
+			user.OGrenade = true
+		}
 		if user.BoatPartDestroyed == 10 {
 			user.Heal = true
 		}
+	} else {
+		if route == "hit" {
+			user.Combo = 0
+		}
 	}
+	fmt.Println(user.Combo)
+	fmt.Println(user.XGrenade)
+	fmt.Println(user.OGrenade)
+	fmt.Println(user.BoatPartDestroyed)
 	fmt.Println(res)
 	return true
 }
@@ -378,9 +431,12 @@ func checkIfPortIsFree(port int) string {
 func waitingForPlayers(playerList *[]player.Player, port int) {
 	for len(*playerList) == 0 {
 		CallClear()
-		fmt.Println("Waiting for players...")
+		fmt.Printf("Waiting for players")
 		getPlayers(playerList, port)
-		time.Sleep(10 * time.Second)
+		for i := 0; i < 10; i++ {
+			fmt.Printf(".")
+			time.Sleep(1 * time.Second)
+		}
 	}
 }
 
