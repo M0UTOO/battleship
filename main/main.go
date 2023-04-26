@@ -329,10 +329,12 @@ func main() {
 										countDestroyedPlayer++
 									}
 								}
-								if countDestroyedPlayer == len(player.Boats) {
+								fmt.Println(countDestroyed)
+								fmt.Println(countDestroyedPlayer)
+								if countDestroyed == len(player.Boats) {
 									fmt.Println("All your boats are destroyed, you lost the game, you cannot attack anymore")
-								} else if countDestroyed == len(player.Boats) {
-									fmt.Println("All the boats of " + player.Pseudo + " are destroyed, you won the game, you cannot attack anymore")
+								} else if countDestroyedPlayer == len(player.Boats) {
+									fmt.Println("All the boats of " + player.Pseudo + " are destroyed, you cannot attack him/her anymore")
 								} else {
 									var x int = 0
 									var y int = 0
@@ -350,9 +352,83 @@ func main() {
 											fmt.Println("Invalid coordinate, please enter a coordinate between 1 and 10")
 										}
 									}
+									for check != "missile" && check != "xbomb" && check != "obomb" && check != "nuke" {
+										fmt.Println("This is your available weapons : ")
+										fmt.Println("\"missile\" - Missile (1x1)")
+										fmt.Println("\"xbomb\" - Bomb (X mark)")
+										fmt.Println("\"obomb\" - Bomb (3x3)")
+										fmt.Println("\"nuke\" - Nuke (fun!)")
+										fmt.Scanln(&check)
+
+										if check != "missile" && check != "xbomb" && check != "obomb" && check != "nuke" {
+											CallClear()
+											fmt.Println("Invalid answer, please enter 'missile', 'xbomb', 'obomb' or 'nuke'\n")
+										} else if check == "xbomb" || check == "obomb" {
+											if x == 1 || x == 10 || y == 1 || y == 10 {
+												CallClear()
+												fmt.Println("You cannot use this weapon on the edge of the board, please choose another weapon\n")
+												check = ""
+											}
+										} else if check == "nuke" {
+											if user.Nuke == false {
+												CallClear()
+												fmt.Println("You don't have this weapon, please choose another weapon\n")
+												check = ""
+											}
+										} else if check == "xbomb" {
+											if user.XGrenade == false {
+												CallClear()
+												fmt.Println("You don't have this weapon, please choose another weapon\n")
+												check = ""
+											}
+										} else if check == "obomb" {
+											if user.OGrenade == false {
+												CallClear()
+												fmt.Println("You don't have this weapon, please choose another weapon\n")
+												check = ""
+											}
+										}
+									}
+									CallClear()
 									url := "http://localhost:" + strconv.Itoa(player.Port) + "/hit"
-									body := []byte(`{"x":` + strconv.Itoa(x) + `,"y":` + strconv.Itoa(y) + `}`)
-									isConnected = getRouteInfo(url, "hit", player.Pseudo, body, &user)
+
+									if check == "missile" {
+										body := []byte(`{"x":` + strconv.Itoa(x) + `,"y":` + strconv.Itoa(y) + `}`)
+										isConnected = getRouteInfo(url, "hit", player.Pseudo, body, &user)
+									}
+
+									if check == "xbomb" {
+										for i := x - 1; i <= x+1; i++ {
+											for j := y - 1; j <= y+1; j++ {
+												if i+j != (x+y+1) && i+j != (x+y-1) {
+													body := []byte(`{"x":` + strconv.Itoa(i) + `,"y":` + strconv.Itoa(j) + `}`)
+													isConnected = getRouteInfo(url, "hit", player.Pseudo, body, &user)
+												}
+											}
+										}
+										user.XGrenade = false
+									}
+
+									if check == "obomb" {
+										for i := x - 1; i <= x+1; i++ {
+											for j := y - 1; j <= y+1; j++ {
+												body := []byte(`{"x":` + strconv.Itoa(i) + `,"y":` + strconv.Itoa(j) + `}`)
+												isConnected = getRouteInfo(url, "hit", player.Pseudo, body, &user)
+											}
+										}
+										user.OGrenade = false
+									}
+
+									if check == "nuke" {
+										for i := 1; i <= 10; i++ {
+											for j := 1; j <= 10; j++ {
+												body := []byte(`{"x":` + strconv.Itoa(i) + `,"y":` + strconv.Itoa(j) + `}`)
+												isConnected = getRouteInfo(url, "hit", player.Pseudo, body, &user)
+											}
+										}
+										user.Nuke = false
+									}
+
 									if isConnected == false {
 										check = "return"
 									}
@@ -399,21 +475,20 @@ func getRouteInfo(url string, route string, pseudo string, body []byte, user *pl
 		user.Combo += 1
 		if user.Combo == 3 {
 			user.XGrenade = true
+			fmt.Println("You unlocked a X-Grenade !")
 		} else if user.Combo == 5 {
 			user.OGrenade = true
+			fmt.Println("You unlocked a O-Grenade !")
 		}
 		if user.BoatPartDestroyed == 10 {
 			user.Heal = true
+			fmt.Println("You unlocked a Heal !")
 		}
 	} else {
 		if route == "hit" {
 			user.Combo = 0
 		}
 	}
-	fmt.Println(user.Combo)
-	fmt.Println(user.XGrenade)
-	fmt.Println(user.OGrenade)
-	fmt.Println(user.BoatPartDestroyed)
 	fmt.Println(res)
 	return true
 }
@@ -626,7 +701,7 @@ func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Resp
 					}
 				}
 				if c.BoatName == "Water" && c.X == hit.X && c.Y == hit.Y {
-					txt += ("You, missed your shot landed in the water\n")
+					txt += ("You missed, your shot landed in the water\n")
 				}
 			}
 			if txt == "" {
