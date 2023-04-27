@@ -329,12 +329,10 @@ func main() {
 										countDestroyedPlayer++
 									}
 								}
-								fmt.Println(countDestroyed)
-								fmt.Println(countDestroyedPlayer)
 								if countDestroyed == len(player.Boats) {
 									fmt.Println("All your boats are destroyed, you lost the game, you cannot attack anymore")
 								} else if countDestroyedPlayer == len(player.Boats) {
-									fmt.Println("All the boats of " + player.Pseudo + " are destroyed, you cannot attack him/her anymore")
+									fmt.Println("All the boats of " + player.Pseudo + " are destroyed, you cannot attack them anymore")
 								} else {
 									var x int = 0
 									var y int = 0
@@ -353,7 +351,7 @@ func main() {
 										}
 									}
 									for check != "missile" && check != "xbomb" && check != "obomb" && check != "nuke" {
-										fmt.Println("This is your available weapons : ")
+										fmt.Println("These are weapons you could use : ")
 										fmt.Println("\"missile\" - Missile (1x1)")
 										fmt.Println("\"xbomb\" - Bomb (X mark)")
 										fmt.Println("\"obomb\" - Bomb (3x3)")
@@ -461,7 +459,7 @@ func getRouteInfo(url string, route string, pseudo string, body []byte, user *pl
 		resp, err = http.Get(url)
 	}
 	if err != nil {
-		fmt.Println(pseudo + " is not connected anymore (I think he/she rage quit...)\n")
+		fmt.Println(pseudo + " is not connected anymore (I think they raged quit...)\n")
 		return false
 	}
 	defer resp.Body.Close()
@@ -652,22 +650,6 @@ func boats(user *player.Player) func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func checkIsAlive(user *player.Player) bool {
-	var isAlive bool
-	for _, boat := range user.Boats {
-		isAlive = false
-		for _, part := range boat.BoatParts {
-			if part == 0 {
-				isAlive = true
-			}
-		}
-		if isAlive {
-			return true
-		}
-	}
-	return false
-}
-
 func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -715,21 +697,6 @@ func hit(user *player.Player, isOccupied *[]player.Coordinates) func(w http.Resp
 		}
 	}
 }
-
-// func sendRequest(url string, method string) {
-// 	req, err := http.Post(url, "application/json", nil)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	defer req.Body.Close()
-
-// 	// var player player.Player
-// 	var hitReq player.HitReq
-// 	err = json.NewDecoder(req.Body).Decode(&hitReq)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// }
 
 func isFree(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
